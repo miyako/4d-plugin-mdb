@@ -1,0 +1,11 @@
+{
+    "name": "mdb",
+    "id": 20000,
+    "commands": [
+        {
+            "theme": "mdb",
+            "syntax": "mdb test(&T):T",
+            "threadSafe": true
+        }
+    ]
+}

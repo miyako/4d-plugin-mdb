@@ -1,0 +1,4 @@
+mdb/test/userPreferences.*
+mdb/mdb.xcodeproj/xcuserdata/*
+mdb/mdb.xcodeproj/project.xcworkspace/*
+mdb/build/*
