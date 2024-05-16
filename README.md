@@ -10,7 +10,7 @@
 
 Basic principle: map to 4D ORDA types, not SQL
 
-|Access (mdb)||4D
+|Access (mdb)|Access (msdn)|4D|
 |-|-|-|
 |MDB_BOOL|Yes/No||
 |MDB_BYTE|Number||
