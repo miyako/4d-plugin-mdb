@@ -4,4 +4,4 @@
 ![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-mdb/total)
 
 # 4d-plugin-mdb
-[mdb-tools](https://mdbtools.github.io) for 4D.
+[mdb-tools](https://mdbtools.github.io) for 4D (Mac only).
