@@ -12,21 +12,21 @@ Basic principle: map to 4D ORDA types, not SQL
 
 |Access (mdb)|Access (msdn)|4D|
 |-|-|-|
-|MDB_BOOL|Yes/No||
-|MDB_BYTE|Number||
-|MDB_INT|Number||
-|MDB_LONGINT|Number||
-|MDB_MONEY|Currency||
-|MDB_FLOAT|Number||
-|MDB_DOUBLE|Number||
+|MDB_BOOL|Yes/No|boolean|
+|MDB_BYTE|Number|number|
+|MDB_INT|Number|number|
+|MDB_LONGINT|Number|number|
+|MDB_MONEY|Currency|number|
+|MDB_FLOAT|Number|number|
+|MDB_DOUBLE|Number|number|
 ||Large Number||
-|MDB_DATETIME|Date/Time, Date/Time Extended||
-|MDB_BINARY|Attachment||
-|MDB_TEXT|Short Text (formerly known as “Text”)||
-|MDB_OLE|OLE Object||
-|MDB_MEMO|Long Text (formerly known as “Memo”)|
-|MDB_REPID||
-|MDB_NUMERIC|Number|
+|MDB_DATETIME|Date/Time, Date/Time Extended|text|
+|MDB_BINARY|Attachment|blob|
+|MDB_TEXT|Short Text (formerly known as “Text”)|text|
+|MDB_OLE|OLE Object|blob|
+|MDB_MEMO|Long Text (formerly known as “Memo”)|text|
+|MDB_REPID||text|
+|MDB_NUMERIC|Number|number|
 |MDB_COMPLEX||
 ||Hyperlink||
 ||Calculated||
