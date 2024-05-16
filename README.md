@@ -7,7 +7,7 @@
 [mdb-tools](https://mdbtools.github.io) for 4D (Mac only).
 
 
-## Fields Properties
+## Field Properties
 
 * [allowZeroLength](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/allowzerolength-property)
 * [description](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/description-property-access)
