@@ -10,23 +10,27 @@
 
 Basic principle: map to 4D ORDA types, not SQL
 
-|Access (mdb)|4D|
-|-|-|
-|MDB_BOOL||
-|MDB_BYTE||
-|MDB_INT||
-|MDB_LONGINT||
-|MDB_MONEY||
-|MDB_FLOAT||
-|MDB_DOUBLE||
-|MDB_DATETIME||
-|MDB_BINARY||
-|MDB_TEXT||
-|MDB_OLE||
-|MDB_MEMO||
+|Access (mdb)||4D
+|-|-|-|
+|MDB_BOOL|Yes/No||
+|MDB_BYTE|Number||
+|MDB_INT|Number||
+|MDB_LONGINT|Number||
+|MDB_MONEY|Currency||
+|MDB_FLOAT|Number||
+|MDB_DOUBLE|Number||
+||Large Number||
+|MDB_DATETIME|Date/Time, Date/Time Extended||
+|MDB_BINARY|Attachment||
+|MDB_TEXT|Short Text (formerly known as “Text”)||
+|MDB_OLE|OLE Object||
+|MDB_MEMO|Long Text (formerly known as “Memo”)|
 |MDB_REPID||
-|MDB_NUMERIC||
+|MDB_NUMERIC|Number|
 |MDB_COMPLEX||
+||Hyperlink||
+||Calculated||
+||Lookup Wizard||
 
 ## Field properties
 
