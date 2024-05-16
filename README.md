@@ -34,6 +34,8 @@ Basic principle: map to 4D ORDA types, not SQL
 
 ## Field properties
 
+map `allowZeroLength` to 4D `never_null` (inverse).
+
 * [allowZeroLength](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/allowzerolength-property)
 * [description](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/description-property-access)
 * [required](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/required-property-access)
