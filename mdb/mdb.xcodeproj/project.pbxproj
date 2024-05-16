@@ -18,6 +18,8 @@
 		D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D130064E12F02D9700702C0E /* Cocoa.framework */; };
 		D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */ = {isa = PBXBuildFile; fileRef = D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */; settings = {COMPILER_FLAGS = "-Wno-multichar"; }; };
 		D134D4AC1A030BA0008D14EF /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = D134D4A91A030B06008D14EF /* manifest.json */; };
+		D193411E2BF5C99900B72555 /* 4DPlugin-JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D193411C2BF5C99900B72555 /* 4DPlugin-JSON.cpp */; };
+		D193411F2BF5C99900B72555 /* 4DPlugin-JSON.h in Headers */ = {isa = PBXBuildFile; fileRef = D193411D2BF5C99900B72555 /* 4DPlugin-JSON.h */; };
 		D1FCA8E12BF39D2F002D8494 /* libmdb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1FCA8E02BF39D27002D8494 /* libmdb.a */; };
 		D1FCA8E22BF39D2F002D8494 /* libmdbsql.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1FCA8DF2BF39D27002D8494 /* libmdbsql.a */; };
 		D1FCA8E42BF39D55002D8494 /* libglib-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1FCA8E32BF39D4E002D8494 /* libglib-2.0.a */; };
@@ -56,6 +58,8 @@
 		D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = 4DPluginAPI.c; sourceTree = "<group>"; };
 		D134D4A91A030B06008D14EF /* manifest.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
 		D14D10DD1A03A8A5008B3411 /* constants.xlf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = constants.xlf; sourceTree = "<group>"; };
+		D193411C2BF5C99900B72555 /* 4DPlugin-JSON.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = "4DPlugin-JSON.cpp"; path = "support/4DPlugin-JSON.cpp"; sourceTree = "<group>"; };
+		D193411D2BF5C99900B72555 /* 4DPlugin-JSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "4DPlugin-JSON.h"; path = "support/4DPlugin-JSON.h"; sourceTree = "<group>"; };
 		D1FCA8DF2BF39D27002D8494 /* libmdbsql.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmdbsql.a; path = a/libmdbsql.a; sourceTree = "<group>"; };
 		D1FCA8E02BF39D27002D8494 /* libmdb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmdb.a; path = a/libmdb.a; sourceTree = "<group>"; };
 		D1FCA8E32BF39D4E002D8494 /* libglib-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libglib-2.0.a"; path = "a/libglib-2.0.a"; sourceTree = "<group>"; };
@@ -116,6 +120,8 @@
 		08FB77ADFE841716C02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				D193411C2BF5C99900B72555 /* 4DPlugin-JSON.cpp */,
+				D193411D2BF5C99900B72555 /* 4DPlugin-JSON.h */,
 				D1FCA8E92BF3B904002D8494 /* C_TEXT.cpp */,
 				D1FCA8EA2BF3B904002D8494 /* C_TEXT.h */,
 				D1FCA8EB2BF3B904002D8494 /* C_TYPES.h */,
@@ -175,6 +181,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D193411F2BF5C99900B72555 /* 4DPlugin-JSON.h in Headers */,
 				18B684F706944F2000CC6A1E /* 4DPluginAPI.h in Headers */,
 				18B684F806944F2000CC6A1E /* EntryPoints.h in Headers */,
 				18B684F906944F2000CC6A1E /* Flags.h in Headers */,
@@ -287,6 +294,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D193411E2BF5C99900B72555 /* 4DPlugin-JSON.cpp in Sources */,
 				18B684FF06944F8800CC6A1E /* 4DPlugin-mdb.cpp in Sources */,
 				D1FCA8EC2BF3B904002D8494 /* C_TEXT.cpp in Sources */,
 				D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */,

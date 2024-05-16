@@ -35,8 +35,11 @@
 				"preemptive": "capable"
 			}
 		},
-		"test": {
-			"timeStamp": "2024-05-14T15:36:52Z"
+		"test_sql": {
+			"timeStamp": "2024-05-16T05:59:30Z",
+			"attributes": {
+				"invisible": true
+			}
 		},
 		"generate_project": {
 			"timeStamp": "2024-05-14T13:17:14Z"

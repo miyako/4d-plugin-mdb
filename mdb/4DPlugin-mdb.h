@@ -14,10 +14,13 @@
 #include "4DPluginAPI.h"
 #include "mdbsql.h"
 #include "mdbtools.h"
+#include <stdlib.h>
+
 #include "C_TEXT.h"
+#include "4DPlugin-JSON.h"
 
 #pragma mark -
 
-void mdb_test(PA_PluginParameters params);
+static void mdb_sql(PA_PluginParameters params);
 
 #endif /* PLUGIN_MDB_H */

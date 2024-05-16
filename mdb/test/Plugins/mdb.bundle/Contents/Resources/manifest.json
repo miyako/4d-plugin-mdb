@@ -4,7 +4,7 @@
     "commands": [
         {
             "theme": "mdb",
-            "syntax": "mdb test(&T):T",
+            "syntax": "mdb sql(&T;&J):J",
             "threadSafe": true
         }
     ]

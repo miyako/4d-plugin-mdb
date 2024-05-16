@@ -21,7 +21,7 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
 			// --- mdb
             
 			case 1 :
-				mdb_test(params);
+                mdb_sql(params);
 				break;
 
         }
@@ -35,21 +35,63 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
 
 #pragma mark -
 
-#include <stdlib.h>
-#import <Foundation/Foundation.h>
-
-void mdb_test(PA_PluginParameters params) {
-    
-    C_TEXT Param1;
-    C_TEXT returnValue;
-    
+static void mdb_sql(PA_PluginParameters params) {
+        
     sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
     PackagePtr pParams = (PackagePtr)params->fParameters;
     
-    Param1.fromParamAtIndex(pParams, 1);
-    CUTF8String path;
-    Param1.copyPath(&path);
+    PA_ObjectRef returnValue;
+    returnValue = PA_CreateObject();
+    ob_set_b(returnValue, L"success", false);
     
+    C_TEXT Param1;
+    Param1.fromParamAtIndex(pParams, 1);
+    CUTF8String sql, path, delimiter = (const uint8_t *)"\t";
+    Param1.copyUTF8String(&sql);
+    
+    PA_ObjectRef options = PA_GetObjectParameter(params, 2);
+        
+    if(options) {
+        if(ob_is_defined(options, L"path")) {
+            if((ob_get_s(options, L"path", &path)) && path.length()) {
+                
+                MdbSQL *mdbsql = mdb_sql_init();
+                MdbHandle *mdb = mdb_sql_open(mdbsql, (char *)path.c_str());
+                if(mdb) {
+                    
+                    mdb_read_catalog (mdb, MDB_TABLE);
+                    mdb_print_schema(mdb, stdout, NULL, NULL, NULL);
+                    
+                    mdb_sql_run_query(mdbsql, (const gchar *)sql.c_str());
+                    
+                    if (!mdb_sql_has_error(mdbsql)) {
+                        PA_CollectionRef rows = PA_CreateCollection();
+                        while(mdb_sql_fetch_row(mdbsql, mdbsql->cur_table)) {
+                            PA_ObjectRef row = PA_CreateObject();
+                            for (unsigned int j = 0; j < mdbsql->num_columns; ++j) {
+                                MdbSQLColumn *sqlcol = (MdbSQLColumn *)g_ptr_array_index(mdbsql->columns, j);
+                                ob_set_s(row,
+                                         (const char *)sqlcol->name,
+                                         (const char *)(g_ptr_array_index(mdbsql->bound_values, j)));
+                            }
+                            PA_Variable v = PA_CreateVariable(eVK_Object);
+                            PA_SetObjectVariable(&v, row);
+                            PA_SetCollectionElement(rows, PA_GetCollectionLength(rows), v);
+                            PA_ClearVariable(&v);
+                        }
+                        ob_set_n(returnValue, L"length", mdbsql->row_count);
+                        ob_set_c(returnValue, L"values", rows);
+                        ob_set_b(returnValue, L"success", true);
+                    }else{
+                        ob_set_s(returnValue, "errorMessage", mdb_sql_last_error(mdbsql));
+                        
+                    }
+                }
+                mdb_sql_exit(mdbsql);
+            }
+        }
+    }
+/*
     MdbHandle *mdb = mdb_open ((const char *)path.c_str(), MDB_NOFLAGS);
 
     if(mdb) {
@@ -85,7 +127,7 @@ void mdb_test(PA_PluginParameters params) {
         }
         mdb_close (mdb);
     }
-
-    returnValue.setReturn(pResult);
+*/
+    PA_ReturnObject(params, returnValue);
 }
 
