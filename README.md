@@ -6,8 +6,29 @@
 # 4d-plugin-mdb
 [mdb-tools](https://mdbtools.github.io) for 4D (Mac only).
 
+## Field types
 
-## Field Properties
+Basic principle: map to 4D ORDA types, not SQL
+
+|Access (mdb)|4D|
+|-|-|
+|MDB_BOOL||
+|MDB_BYTE||
+|MDB_INT||
+|MDB_LONGINT||
+|MDB_MONEY||
+|MDB_FLOAT||
+|MDB_DOUBLE||
+|MDB_DATETIME||
+|MDB_BINARY||
+|MDB_TEXT||
+|MDB_OLE||
+|MDB_MEMO||
+|MDB_REPID||
+|MDB_NUMERIC||
+|MDB_COMPLEX||
+
+## Field properties
 
 * [allowZeroLength](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/allowzerolength-property)
 * [description](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/description-property-access)
