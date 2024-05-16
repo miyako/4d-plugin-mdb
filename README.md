@@ -27,7 +27,7 @@ Basic principle: map to 4D ORDA types, not SQL
 |MDB_MEMO|Long Text (formerly known as “Memo”)|text|
 |MDB_REPID||text|
 |MDB_NUMERIC|Number|number|
-|MDB_COMPLEX||
+|MDB_COMPLEX||text|
 ||Hyperlink||
 ||Calculated||
 ||Lookup Wizard||
