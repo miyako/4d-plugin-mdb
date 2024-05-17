@@ -188,8 +188,12 @@ static void mdb_export(PA_PluginParameters params) {
                 g_free(bound_values);
                 g_free(bound_lens);
                 mdb_free_tabledef(table);
+            }else{
+                ob_set_s(returnValue, "errorMessage", "failed: mdb_read_table_by_name()");
             }
             mdb_close(mdb);
+        }else{
+            ob_set_s(returnValue, "errorMessage", "failed: mdb_open()");
         }
     }
     PA_ReturnObject(params, returnValue);
@@ -220,12 +224,15 @@ static void mdb_tables(PA_PluginParameters params) {
                     if(entry->object_type != MDB_TABLE) continue;
                     
                     PA_ObjectRef table = PA_CreateObject();
-                    ob_set_b(table, L"isSystemTable", mdb_is_system_table(entry));
-                    ob_set_s(table,
-                             "name",
-                             (const char *)entry->object_name);
+                    if(mdb_is_system_table(entry)) {
+                        ob_set_s(table, "type", "system");
+                    }else if(mdb_is_user_table(entry)) {
+                        ob_set_s(table, "type", "user");
+                    }
+                    ob_set_s(table, "name", (const char *)entry->object_name);
                     
                     MdbTableDef *t = mdb_read_table (entry);
+                    
                     mdb_read_columns(t);
                     
                     PA_CollectionRef fields = PA_CreateCollection();
@@ -233,9 +240,7 @@ static void mdb_tables(PA_PluginParameters params) {
                         MdbColumn *col = (MdbColumn *)g_ptr_array_index (t->columns, j);
                         
                         PA_ObjectRef field = PA_CreateObject();
-                        ob_set_s(field,
-                                 "name",
-                                 (const char *)col->name);
+                        ob_set_s(field, "name", (const char *)col->name);
                         
                         if (mdb_colbacktype_takes_length(col)) {
                             if (col->col_size == 0) {
@@ -263,13 +268,91 @@ static void mdb_tables(PA_PluginParameters params) {
                             }
                         }
                         
+                        switch (col->col_type) {
+                            case MDB_BOOL:
+                                ob_set_s(field,
+                                         "type",
+                                         "BOOL");
+                                break;
+                            case MDB_BYTE:
+                                ob_set_s(field,
+                                         "type",
+                                         "BYTE");
+                                break;
+                            case MDB_INT:
+                                ob_set_s(field,
+                                         "type",
+                                         "INT");
+                                break;
+                            case MDB_LONGINT:
+                                ob_set_s(field,
+                                         "type",
+                                         "LONGINT");
+                                break;
+                            case MDB_MONEY:
+                                ob_set_s(field,
+                                         "type",
+                                         "MONEY");
+                                break;
+                            case MDB_FLOAT:
+                                ob_set_s(field,
+                                         "type",
+                                         "FLOAT");
+                                break;
+                            case MDB_DOUBLE:
+                                ob_set_s(field,
+                                         "type",
+                                         "DOUBLE");
+                                break;
+                            case MDB_DATETIME:
+                                ob_set_s(field,
+                                         "type",
+                                         "DATETIME");
+                                break;
+                            case MDB_BINARY:
+                                ob_set_s(field,
+                                         "type",
+                                         "BINARY");
+                                break;
+                            case MDB_TEXT:
+                                ob_set_s(field,
+                                         "type",
+                                         "TEXT");
+                                break;
+                            case MDB_OLE:
+                                ob_set_s(field,
+                                         "type",
+                                         "OLE");
+                                break;
+                            case MDB_MEMO:
+                                ob_set_s(field,
+                                         "type",
+                                         "MEMO");
+                                break;
+                            case MDB_REPID:
+                                ob_set_s(field,
+                                         "type",
+                                         "REPID");
+                                break;
+                            case MDB_NUMERIC:
+                                ob_set_s(field,
+                                         "type",
+                                         "NUMERIC");
+                                break;
+                            case MDB_COMPLEX:
+                                ob_set_s(field,
+                                         "type",
+                                         "COMPLEX");
+                                break;
+                        }
+                        
                         if (col->props) {
                             gchar *defval = (gchar *)g_hash_table_lookup(col->props->hash, "DefaultValue");
                             if (defval) {
                                 switch (col->col_type) {
                                     case MDB_MEMO:
                                     case MDB_TEXT:
-                                    case MDB_REPID:
+                                    case MDB_DATETIME:
                                     {
                                         std::string stringValue;
                                         size_t def_len = strlen(defval);
@@ -290,21 +373,6 @@ static void mdb_tables(PA_PluginParameters params) {
                                         ob_set_b(field,
                                                  L"defaultValue",
                                                  !strcmp(defval, "Yes"));
-                                    }
-                                        break;
-                                    case MDB_DATETIME:
-                                    {
-                                        if (!g_ascii_strcasecmp(defval, "date()")) {
-                                            if (mdb_col_is_shortdate(col)) {
-                                                ob_set_s(field,
-                                                         "defaultValue",
-                                                         "shortDate()");
-                                            }else{
-                                                ob_set_s(field,
-                                                         "defaultValue",
-                                                         "longDate()");
-                                            }
-                                        }
                                     }
                                         break;
                                     case MDB_NUMERIC:
@@ -356,16 +424,16 @@ static void mdb_tables(PA_PluginParameters params) {
                         if(format) {
                             ob_set_s(field, "format", format);
                         }
+                                                
+                        const char *inputMask = mdb_col_get_prop(col, "InputMask");
+                        if(inputMask) {
+                            ob_set_s(field, "inputMask", inputMask);
+                        }
                         
 //                        const char *caption = mdb_col_get_prop(col, "Caption");
 //                        if(caption) {
 //                            ob_set_s(field, "caption", caption);
 //                        }
-                        
-                        const char *inputMask = mdb_col_get_prop(col, "InputMask");
-                        if(inputMask) {
-                            ob_set_s(field, "inputMask", inputMask);
-                        }
                         
 //                        const char *newValues = mdb_col_get_prop(col, "NewValues");
 //                        if(newValues) {
@@ -431,6 +499,8 @@ static void mdb_tables(PA_PluginParameters params) {
                 ob_set_b(returnValue, L"success", true);
             }
             mdb_close(mdb);
+        }else{
+            ob_set_s(returnValue, "errorMessage", "failed: mdb_open()");
         }
     }
 
@@ -482,6 +552,8 @@ static void mdb_sql(PA_PluginParameters params) {
                 ob_set_s(returnValue, "errorMessage", mdb_sql_last_error(mdbsql));
                 
             }
+        }else{
+            ob_set_s(returnValue, "errorMessage", "failed: mdb_open()");
         }
         mdb_sql_exit(mdbsql);
     }
