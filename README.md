@@ -34,7 +34,7 @@ path|Text|POSIX path
 out|Text|POSIX path
 status|Object|
 
-## The `SQL EXPORT SELECTION` format
+the generated file follows the `SQL EXPORT SELECTION` output format:
 
 * large Blob goes to ./BLOBS/Blob0.BLOB
 * large Picture goes to ./BLOBS/{name.extension}
