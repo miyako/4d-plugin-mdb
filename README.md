@@ -24,6 +24,34 @@ success|Boolean|
 errorMessage|Text|optional
 values|Collection|all values are text
 
+```4d
+status:=mdb export(path;out)
+```
+
+Parameter|Type|Description
+------------|------------|----
+path|Text|POSIX path
+out|Text|POSIX path
+status|Object|
+
+## The `SQL EXPORT SELECTION` format
+
+* large Blob goes to ./BLOBS/Blob0.BLOB
+* large Picture goes to ./BLOBS/{name.extension}
+* main SQL
+  * table/field names are escaped
+  * Date includes default time
+  * Null is `NULL`
+  * Text is single quoted; single quotes are prefixed by an extra single quote
+  * small Blobs & Pictures are exported as hex e.g. `X'01020304'`
+
+```sql
+INSERT INTO [Table_1] ( [Id] , [Field_2] , [Field_3] , [Field_4] )
+VALUES
+(1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '"aa
+	\');
+```
+
 
 
 ## Field types
