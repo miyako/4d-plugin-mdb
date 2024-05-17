@@ -55,6 +55,65 @@ VALUES (1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '''abcd', INF
 
 except, binary fields (`MDB_OLE` `MDB_BINARY` `MDB_REPID`) are always exported as hex.
 
+Properties of ``status``:
+
+Parameter|Type|Description
+------------|------------|----
+success|Boolean|
+errorMessage|Text|optional
+
+```4d
+status:=mdb tables(path)
+```
+
+Parameter|Type|Description
+------------|------------|----
+path|Text|POSIX path
+status|Object|
+
+Properties of ``status``:
+
+Parameter|Type|Description
+------------|------------|----
+success|Boolean|
+errorMessage|Text|optional
+tables|Collection|
+
+Properties of ``table``:
+
+Parameter|Type|Description
+------------|------------|----
+name|Text|
+type|Text|system or user
+description|Text|optional
+fields|Collection|
+
+Properties of ``field``:
+
+Parameter|Type|Description
+------------|------------|----
+name|Text|
+type|Text|
+description|Text|optional
+length|Number|optional
+defaultValue|Variant|optional
+format|Text|optional
+inputMask|Text|optional
+allowZeroLength|Boolean|optional
+required|Boolean|optional
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Field types
 
