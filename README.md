@@ -42,6 +42,7 @@ status|Object|
   * table/field names are escaped
   * Date includes default time
   * Null is `NULL`
+  * Boolean is `0` or `1`
   * Text is single quoted; single quotes are prefixed by an extra single quote; `\r\t\n\"\\` are exported raw
   * small Blobs & Pictures are exported as hex e.g. `X'01020304'`
 
