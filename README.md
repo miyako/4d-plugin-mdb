@@ -101,3 +101,7 @@ length|Number|optional
 precision|Number|optional
 scale|Number|optional
 properties|Object|
+
+---
+
+## DDL for 4D SQL
