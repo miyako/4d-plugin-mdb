@@ -105,3 +105,25 @@ properties|Object|
 ---
 
 ## DDL for 4D SQL
+
+https://doc.4d.com/4Dv20R4/4D/20-R4/4D-SQL-engine-implementation.300-6778464.en.html
+
+Access (mdb)|4D SQL||
+------------|------------|----
+MDB_BOOL|Boolean|Yes/No
+MDB_BYTE|Int|
+MDB_INT|Int|
+MDB_LONGINT|Int|
+MDB_MONEY|Real|Monetary data, stored with 4 decimal places of precision
+MDB_FLOAT|Real|
+MDB_DOUBLE|Real|
+MDB_DATETIME|Timestamp|Date/Time (8 bytes) or Date/Time Extended (Encoded string of 42 bytes)
+MDB_BINARY|Blob|Attachment
+MDB_TEXT|Text|Short Text (formerly known as “Text”)
+MDB_OLE|Blob|Pictures, graphs, or other ActiveX objects from another Windows-based application.
+MDB_MEMO|Text|Long Text (formerly known as “Memo”
+MDB_REPID|Text (UUID)|AutoNumber (16 bytes for ReplicationID)
+MDB_NUMERIC|Real|
+MDB_COMPLEX|Int|
+
+Large Number (Int64) is not supported. see `data.c` for details.
