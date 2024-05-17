@@ -42,14 +42,13 @@ status|Object|
   * table/field names are escaped
   * Date includes default time
   * Null is `NULL`
-  * Text is single quoted; single quotes are prefixed by an extra single quote
+  * Text is single quoted; single quotes are prefixed by an extra single quote; `\r\t\n\"\\` are exported raw
   * small Blobs & Pictures are exported as hex e.g. `X'01020304'`
 
 ```sql
-INSERT INTO [Table_1] ( [Id] , [Field_2] , [Field_3] , [Field_4] )
-VALUES
-(1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '"aa
-	\');
+INSERT INTO [Table_1] ( [Id] , [Field_2] , [Field_3] , [Field_4] , [Field_5] )
+VALUES (1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '''abcd', INFILE 'BLOBS/Pict0.tif'),
+VALUES (2 , INFILE 'BLOBS/Blob1.BLOB' , '2024/05/17 00:00:00:00' , '''efgh', X'544350340800000000000');
 ```
 
 
