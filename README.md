@@ -95,6 +95,8 @@ Parameter|Type|Description
 name|Text|
 type|Text|
 description|Text|optional
+position|Number|
+number|Number|
 length|Number|optional
 defaultValue|Variant|optional
 format|Text|optional
