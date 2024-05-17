@@ -16,6 +16,11 @@
             "theme": "mdb",
             "syntax": "mdb export(&T;&T;&T):J",
             "threadSafe": true
+        },
+        {
+            "theme": "mdb",
+            "syntax": "mdb schema(&T;&T):J",
+            "threadSafe": true
         }
     ]
 }

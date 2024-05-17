@@ -29,7 +29,9 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
             case 3 :
                 mdb_export(params);
                 break;
-
+            case 4 :
+                mdb_schema(params);
+                break;
         }
 
 	}
@@ -67,7 +69,7 @@ static void format_value(FILE *outfile, char *value, size_t length, int col_type
                       MDB_BINEXPORT_HEXADECIMAL);
         g_free (quote_char_binary_sqlite);
     }else {
-        mdb_print_col(outfile, value, 1, col_type, (int)length, "'", NULL, MDB_BINEXPORT_HEXADECIMAL);
+        mdb_print_col(outfile, value, 1, col_type, (int)length, (char *)"'", NULL, MDB_BINEXPORT_HEXADECIMAL);
     }
 }
 
@@ -199,9 +201,18 @@ static void mdb_export(PA_PluginParameters params) {
     PA_ReturnObject(params, returnValue);
 }
 
+static void mdb_schema(PA_PluginParameters params) {
+
+}
+
+static void print_properties(gpointer key, gpointer value, gpointer p) {
+    
+    ob_set_s((PA_ObjectRef)p, (const char *)key, (const char *)value);
+}
+
 static void mdb_tables(PA_PluginParameters params) {
     
-    sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
+//    sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
     PackagePtr pParams = (PackagePtr)params->fParameters;
     
     PA_ObjectRef returnValue;
@@ -222,26 +233,38 @@ static void mdb_tables(PA_PluginParameters params) {
                     MdbCatalogEntry *entry = (MdbCatalogEntry *)g_ptr_array_index (mdb->catalog, i);
                     
                     if(entry->object_type != MDB_TABLE) continue;
-                    
+                                        
                     PA_ObjectRef table = PA_CreateObject();
+                    ob_set_s(table, "name", (const char *)entry->object_name);
+//                    ob_set_n(table, "id", entry->table_pg);
+                    
                     if(mdb_is_system_table(entry)) {
                         ob_set_s(table, "type", "system");
                     }else if(mdb_is_user_table(entry)) {
                         ob_set_s(table, "type", "user");
+                    }else{
+                        ob_set_s(table, "type", "unknown");
                     }
-                    ob_set_s(table, "name", (const char *)entry->object_name);
                     
                     MdbTableDef *t = mdb_read_table (entry);
                     
                     mdb_read_columns(t);
+                    mdb_rewind_table(t);
                     
                     PA_CollectionRef fields = PA_CreateCollection();
                     for (unsigned int j = 0; j < t->num_cols; ++j) {
                         MdbColumn *col = (MdbColumn *)g_ptr_array_index (t->columns, j);
-                        
                         PA_ObjectRef field = PA_CreateObject();
                         ob_set_s(field, "name", (const char *)col->name);
+//                        ob_set_n(field, "id", col->row_col_num);
                         
+                        if(col->is_long_auto) {
+                            ob_set_b(field, L"autosequence", true);
+                        }
+                        if(col->is_uuid_auto) {
+                            ob_set_b(field, L"autogenerate", true);
+                        }
+
                         if (mdb_colbacktype_takes_length(col)) {
                             if (col->col_size == 0) {
                                 ob_set_n(field,
@@ -346,137 +369,12 @@ static void mdb_tables(PA_PluginParameters params) {
                                 break;
                         }
                         
-                        if (col->props) {
-                            gchar *defval = (gchar *)g_hash_table_lookup(col->props->hash, "DefaultValue");
-                            if (defval) {
-                                switch (col->col_type) {
-                                    case MDB_MEMO:
-                                    case MDB_TEXT:
-                                    case MDB_DATETIME:
-                                    {
-                                        std::string stringValue;
-                                        size_t def_len = strlen(defval);
-                                        if((def_len > 1) && (defval[0]=='"' && defval[def_len-1]=='"')) {
-                                            std::vector<char *>buf(def_len-1);
-                                            memcpy(&buf[0], defval+1, def_len-2);
-                                            stringValue = (const char *)&buf[0];
-                                        }else{
-                                            stringValue = (const char *)defval;
-                                        }
-                                        ob_set_s(field,
-                                                 "defaultValue",
-                                                 stringValue.c_str());
-                                    }
-                                        break;
-                                    case MDB_BOOL:
-                                    {
-                                        ob_set_b(field,
-                                                 L"defaultValue",
-                                                 !strcmp(defval, "Yes"));
-                                    }
-                                        break;
-                                    case MDB_NUMERIC:
-                                    case MDB_BYTE:
-                                    case MDB_INT:
-                                    case MDB_LONGINT:
-                                    case MDB_MONEY:
-                                    case MDB_FLOAT:
-                                    case MDB_DOUBLE:
-                                    {
-                                        double d;
-                                        sscanf(defval, "%lf", &d);
-                                        ob_set_n(field,
-                                                 L"defaultValue",
-                                                 d);
-                                    }
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                        }
-                        
-                        /*
-                         properties
-                         */
-                        
-//                        const char *appendOnly = mdb_col_get_prop(col, "AppendOnly");
-//                        if(appendOnly) {
-//                            ob_set_b(field, L"appendOnly", appendOnly  && appendOnly[0]=='n');
-//                        }
-                        
-//                        const char *validationRule = mdb_col_get_prop(col, "ValidationRule");
-//                        if(validationRule) {
-//                            ob_set_s(field, "validationRule", validationRule);
-//                        }
-                        
-//                        const char *validationText = mdb_col_get_prop(col, "ValidationText");
-//                        if(validationText) {
-//                            ob_set_s(field, "validationText", validationText);
-//                        }
-                        
-                        const char *description = mdb_col_get_prop(col, "Description");
-                        if(description) {
-                            ob_set_s(field, "description", description);
-                        }
-                        
-                        const char *format = mdb_col_get_prop(col, "Format");
-                        if(format) {
-                            ob_set_s(field, "format", format);
+                        if(col->props) {
+                            PA_ObjectRef properties = PA_CreateObject();
+                            g_hash_table_foreach(col->props->hash, print_properties, properties);
+                            ob_set_o(field, L"properties", properties);
                         }
                                                 
-                        const char *inputMask = mdb_col_get_prop(col, "InputMask");
-                        if(inputMask) {
-                            ob_set_s(field, "inputMask", inputMask);
-                        }
-                        
-//                        const char *caption = mdb_col_get_prop(col, "Caption");
-//                        if(caption) {
-//                            ob_set_s(field, "caption", caption);
-//                        }
-                        
-//                        const char *newValues = mdb_col_get_prop(col, "NewValues");
-//                        if(newValues) {
-//                            ob_set_s(field, "newValues", newValues);
-//                        }
-                        
-//                        const char *textAlign = mdb_col_get_prop(col, "TextAlign");
-//                        if(textAlign) {
-//                            ob_set_s(field, "textAlign", textAlign);
-//                        }
-                        
-//                        const char *decimalPlaces = mdb_col_get_prop(col, "DecimalPlaces");
-//                        if(decimalPlaces) {
-//                            ob_set_s(field, "decimalPlaces", decimalPlaces);
-//                        }
-                        
-//                        const char *IMEMode = mdb_col_get_prop(col, "IMEMode");
-//                        if(IMEMode) {
-//                            ob_set_s(field, "IMEMode", IMEMode);
-//                        }
-                        
-//                        const char *IMESentenceMode = mdb_col_get_prop(col, "IMESentenceMode");
-//                        if(IMESentenceMode) {
-//                            ob_set_s(field, "IMESentenceMode", IMESentenceMode);
-//                        }
-                        
-//                        const char *showDatePicker = mdb_col_get_prop(col, "ShowDatePicker");
-//                        if(showDatePicker) {
-//                            ob_set_b(field, L"showDatePicker", showDatePicker[0] == '1');//1,0
-//                        }
-                        
-                        //bools
-                        
-                        const char *allowZeroLength = mdb_col_get_prop(col, "AllowZeroLength");
-                        if(allowZeroLength) {
-                            ob_set_b(field, L"allowZeroLength", allowZeroLength[0] == 'y');//yes,no
-                        }
-                        
-                        const char *required = mdb_col_get_prop(col, "Required");
-                        if(required) {
-                            ob_set_b(field, L"required", required[0] == 'y');//yes,no
-                        }
-                        
                         PA_Variable v = PA_CreateVariable(eVK_Object);
                         PA_SetObjectVariable(&v, field);
                         PA_SetCollectionElement(fields, PA_GetCollectionLength(fields), v);
@@ -487,6 +385,8 @@ static void mdb_tables(PA_PluginParameters params) {
                     if(description) {
                         ob_set_s(table, "description", description);
                     }
+                    
+                    mdb_free_tabledef(t);
                     
                     ob_set_c(table, L"fields", fields);
 

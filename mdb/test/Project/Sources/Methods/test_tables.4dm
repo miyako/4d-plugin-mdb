@@ -4,5 +4,5 @@ $path:=File:C1566(File:C1566("/RESOURCES/顧客管理.accde").platformPath; fk p
 $status:=mdb tables($path)
 
 If ($status.success)
-	SET TEXT TO PASTEBOARD:C523(JSON Stringify:C1217($status.tables))
+	SET TEXT TO PASTEBOARD:C523(JSON Stringify:C1217($status.tables; *))
 End if 
