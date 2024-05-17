@@ -48,8 +48,8 @@ status|Object|
 
 ```sql
 INSERT INTO [Table_1] ( [Id] , [Field_2] , [Field_3] , [Field_4] , [Field_5] )
-VALUES (1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '''abcd', INFILE 'BLOBS/Pict0.tif'),
-       (2 , INFILE 'BLOBS/Blob1.BLOB' , '2024/05/17 00:00:00:00' , '''efgh', X'544350340800000000000');
+VALUES (1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '''abcd', INFILE 'BLOBS/Pic0.tif'),
+       (2 , INFILE 'BLOBS/Blob1.BLOB' , '2024/05/17 00:00:00:00' , '''efgh', X'54435034080000000000');
 ```
 
 
