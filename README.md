@@ -53,6 +53,7 @@ VALUES (1 , INFILE 'BLOBS/Blob0.BLOB' , '2024/05/17 00:00:00:00' , '''abcd', INF
        (2 , INFILE 'BLOBS/Blob1.BLOB' , '2024/05/17 00:00:00:00' , '''efgh', X'54435034080000000000');
 ```
 
+except, binary fields (`MDB_OLE` `MDB_BINARY` `MDB_REPID`) are always exported as hex.
 
 
 ## Field types
