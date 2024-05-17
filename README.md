@@ -95,62 +95,9 @@ Parameter|Type|Description
 name|Text|
 type|Text|
 description|Text|optional
-id|Number|
 autosequence|Boolean|optional
 autogenerate|Boolean|optional
 length|Number|optional
-defaultValue|Variant|optional
-format|Text|optional
-inputMask|Text|optional
-allowZeroLength|Boolean|optional
-required|Boolean|optional
 precision|Number|optional
 scale|Number|optional
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Field types
-
-Basic principle: map to 4D ORDA types, not SQL
-
-|Access (mdb)|Access (msdn)|4D|
-|-|-|-|
-|MDB_BOOL|Yes/No|boolean|
-|MDB_BYTE|Number|number|
-|MDB_INT|Number|number|
-|MDB_LONGINT|Number|number|
-|MDB_MONEY|Currency|number|
-|MDB_FLOAT|Number|number|
-|MDB_DOUBLE|Number|number|
-||Large Number||
-|MDB_DATETIME|Date/Time, Date/Time Extended|text|
-|MDB_BINARY|Attachment|blob|
-|MDB_TEXT|Short Text (formerly known as “Text”)|text|
-|MDB_OLE|OLE Object|blob|
-|MDB_MEMO|Long Text (formerly known as “Memo”)|text|
-|MDB_REPID||text|
-|MDB_NUMERIC|Number|number|
-|MDB_COMPLEX||text|
-||Hyperlink||
-||Calculated||
-||Lookup Wizard||
-
-## Field properties
-
-map `allowZeroLength` to 4D `never_null` (inverse).
-
-* [allowZeroLength](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/allowzerolength-property)
-* [description](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/description-property-access)
-* [required](https://learn.microsoft.com/en-us/office/vba/access/concepts/miscellaneous/required-property-access)
-* inputMask
-* format
+properties|Object|
