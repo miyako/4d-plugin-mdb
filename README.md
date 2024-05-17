@@ -6,6 +6,26 @@
 # 4d-plugin-mdb
 [mdb-tools](https://mdbtools.github.io) for 4D (Mac only).
 
+```4d
+status:=mdb sql(path;sql)
+```
+
+Parameter|Type|Description
+------------|------------|----
+path|Text|POSIX path
+sql|Text|no `;` at the end. `[escape]` where necessary
+status|Object|
+
+Properties of ``status``:
+
+Parameter|Type|Description
+------------|------------|----
+success|Boolean|
+errorMessage|Text|optional
+values|Collection|all values are text
+
+
+
 ## Field types
 
 Basic principle: map to 4D ORDA types, not SQL
