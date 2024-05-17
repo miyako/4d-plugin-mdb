@@ -102,6 +102,19 @@ inputMask|Text|optional
 allowZeroLength|Boolean|optional
 required|Boolean|optional
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Field types
 
 Basic principle: map to 4D ORDA types, not SQL
