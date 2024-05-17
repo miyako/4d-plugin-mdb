@@ -22,5 +22,7 @@
 #pragma mark -
 
 static void mdb_sql(PA_PluginParameters params);
+static void mdb_tables(PA_PluginParameters params);
+static void mdb_export(PA_PluginParameters params);
 
 #endif /* PLUGIN_MDB_H */

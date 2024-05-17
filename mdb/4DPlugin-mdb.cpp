@@ -23,6 +23,12 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
 			case 1 :
                 mdb_sql(params);
 				break;
+            case 2 :
+                mdb_tables(params);
+                break;
+            case 3 :
+                mdb_export(params);
+                break;
 
         }
 
@@ -35,8 +41,162 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
 
 #pragma mark -
 
-static void mdb_sql(PA_PluginParameters params) {
-        
+static int
+mdb_colbacktype_takes_length_in_characters(const MdbColumn *col) {
+    
+    const MdbBackendType *type = mdb_get_colbacktype(col);
+    if (!type) return 0;
+    return type->needs_char_length;
+}
+
+#define is_binary_type(x) (x==MDB_OLE || x==MDB_BINARY || x==MDB_REPID)
+#define EXPORT_BIND_SIZE 200000
+
+static void format_value(FILE *outfile, char *value, size_t length, int col_type) {
+
+    if(is_binary_type(col_type)) {
+        char *quote_char_binary_sqlite = (char *) g_strdup("'");
+        fputs("X", outfile);
+        mdb_print_col(outfile,
+                      value,
+                      1,
+                      col_type,
+                      (int)length,
+                      quote_char_binary_sqlite,
+                      NULL,
+                      MDB_BINEXPORT_HEXADECIMAL);
+        g_free (quote_char_binary_sqlite);
+    }else {
+        mdb_print_col(outfile, value, 1, col_type, (int)length, "'", NULL, MDB_BINEXPORT_HEXADECIMAL);
+    }
+}
+
+static void mdb_export(PA_PluginParameters params) {
+    
+//    sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
+    PackagePtr pParams = (PackagePtr)params->fParameters;
+    
+    PA_ObjectRef returnValue;
+    returnValue = PA_CreateObject();
+    ob_set_b(returnValue, L"success", false);
+    
+    C_TEXT Param1;
+    Param1.fromParamAtIndex(pParams, 1);
+    CUTF8String path;
+    Param1.copyUTF8String(&path);
+    
+    C_TEXT Param2;
+    Param2.fromParamAtIndex(pParams, 2);
+    CUTF8String name;
+    Param2.copyUTF8String(&name);
+    
+    C_TEXT Param3;
+    Param3.fromParamAtIndex(pParams, 3);
+    CUTF8String output;
+    Param3.copyUTF8String(&output);
+    
+    if(path.length()) {
+        MdbHandle *mdb = mdb_open ((char *)path.c_str(), MDB_NOFLAGS);
+        if(mdb) {
+            
+            mdb_set_date_fmt(mdb, "%Y/%m/%d %H:%M:%S:00");
+            mdb_set_shortdate_fmt(mdb, "%Y/%m/%d 00:00:00:00");
+            mdb_set_bind_size(mdb, EXPORT_BIND_SIZE);
+            
+            MdbTableDef *table = mdb_read_table_by_name(mdb, (char *)name.c_str(), MDB_TABLE);
+            if(table) {
+                mdb_read_columns(table);
+                mdb_rewind_table(table);
+                char **bound_values = (char **)g_malloc(table->num_cols * sizeof(char *));
+                int  *bound_lens = (int  *)g_malloc(table->num_cols * sizeof(int));
+                unsigned int i;
+                int batch_size = 1000;
+                int counter = 0;
+                std::string quoted_table_name = "[";
+                quoted_table_name += (const char *)name.c_str();
+                quoted_table_name += "]";
+                char *value;
+                size_t length;
+                bool bound = true;
+                for (i = 0; i < table->num_cols; i++) {
+                    /* bind columns */
+                    bound_values[i] = (char *)g_malloc0(EXPORT_BIND_SIZE);
+                    int ret = mdb_bind_column(table, i + 1, bound_values[i], &bound_lens[i]);
+                    if (ret == -1) {
+                        bound = false;
+                        break;
+                    }
+                }
+                if(bound) {
+                    FILE *fp = fopen((char *)output.c_str(), "wb");
+                    if(fp) {
+                        while (mdb_fetch_row(table)) {
+                            if (counter % batch_size == 0) {
+                                counter = 0;
+                                fprintf(fp, "INSERT INTO %s ( ", quoted_table_name.c_str());
+                                for (i = 0; i < table->num_cols; ++i) {
+                                    if (i > 0) fputs(" , ", fp);
+                                    MdbColumn *col = (MdbColumn *)g_ptr_array_index(table->columns, i);
+                                    std::string quoted_field_name = "[";
+                                    quoted_field_name += col->name;
+                                    quoted_field_name += "]";
+                                    fputs(quoted_field_name.c_str(), fp);
+                                }
+                                fputs(" )\nVALUES ", fp);
+                            } else {
+                                fputs(",\n       ", fp);
+                            }
+                            fputs("( ", fp);
+                            for (i = 0; i < table->num_cols; ++i) {
+                                if (i > 0)
+                                    fputs(" , ", fp);
+                                MdbColumn *col = (MdbColumn *)g_ptr_array_index(table->columns, i);
+                                if (!bound_lens[i]) {
+                                    fputs("NULL", fp);
+                                } else {
+                                    if (col->col_type == MDB_OLE) {
+                                        value = (char *)mdb_ole_read_full(mdb, col, &length);
+                                    } else {
+                                        value = bound_values[i];
+                                        length = bound_lens[i];
+                                    }
+                                    format_value(fp, value, length, col->col_type);
+                                    if (col->col_type == MDB_OLE)
+                                        free(value);
+                                }
+                            }
+                            fputs(" )", fp);
+                            if (counter % batch_size == batch_size - 1) {
+                                fputs(";\n", fp);
+                            }
+                            counter++;
+                        }
+                        if (counter % batch_size != 0) {
+                            fputs(";\n", fp);
+                        }
+                        fclose(fp);
+                        ob_set_b(returnValue, L"success", true);
+                    }else{
+                        ob_set_s(returnValue, "errorMessage", "failed: fopen()");
+                    }
+                }else{
+                    ob_set_s(returnValue, "errorMessage", "failed: mdb_bind_column()");
+                }
+                for (unsigned int i=0; i<table->num_cols; ++i) {
+                    g_free(bound_values[i]);
+                }
+                g_free(bound_values);
+                g_free(bound_lens);
+                mdb_free_tabledef(table);
+            }
+            mdb_close(mdb);
+        }
+    }
+    PA_ReturnObject(params, returnValue);
+}
+
+static void mdb_tables(PA_PluginParameters params) {
+    
     sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
     PackagePtr pParams = (PackagePtr)params->fParameters;
     
@@ -46,88 +206,286 @@ static void mdb_sql(PA_PluginParameters params) {
     
     C_TEXT Param1;
     Param1.fromParamAtIndex(pParams, 1);
-    CUTF8String sql, path, delimiter = (const uint8_t *)"\t";
-    Param1.copyUTF8String(&sql);
+    CUTF8String path;
+    Param1.copyUTF8String(&path);
     
-    PA_ObjectRef options = PA_GetObjectParameter(params, 2);
-        
-    if(options) {
-        if(ob_is_defined(options, L"path")) {
-            if((ob_get_s(options, L"path", &path)) && path.length()) {
-                
-                MdbSQL *mdbsql = mdb_sql_init();
-                MdbHandle *mdb = mdb_sql_open(mdbsql, (char *)path.c_str());
-                if(mdb) {
+    if(path.length()) {
+        MdbHandle *mdb = mdb_open ((char *)path.c_str(), MDB_NOFLAGS);
+        if(mdb) {
+            if(mdb_read_catalog (mdb, MDB_ANY)) {
+                PA_CollectionRef tables = PA_CreateCollection();
+                for (unsigned int i = 0; i < mdb->num_catalog; ++i) {
+                    MdbCatalogEntry *entry = (MdbCatalogEntry *)g_ptr_array_index (mdb->catalog, i);
                     
-                    mdb_read_catalog (mdb, MDB_TABLE);
-                    mdb_print_schema(mdb, stdout, NULL, NULL, NULL);
+                    if(entry->object_type != MDB_TABLE) continue;
                     
-                    mdb_sql_run_query(mdbsql, (const gchar *)sql.c_str());
+                    PA_ObjectRef table = PA_CreateObject();
+                    ob_set_b(table, L"isSystemTable", mdb_is_system_table(entry));
+                    ob_set_s(table,
+                             "name",
+                             (const char *)entry->object_name);
                     
-                    if (!mdb_sql_has_error(mdbsql)) {
-                        PA_CollectionRef rows = PA_CreateCollection();
-                        while(mdb_sql_fetch_row(mdbsql, mdbsql->cur_table)) {
-                            PA_ObjectRef row = PA_CreateObject();
-                            for (unsigned int j = 0; j < mdbsql->num_columns; ++j) {
-                                MdbSQLColumn *sqlcol = (MdbSQLColumn *)g_ptr_array_index(mdbsql->columns, j);
-                                ob_set_s(row,
-                                         (const char *)sqlcol->name,
-                                         (const char *)(g_ptr_array_index(mdbsql->bound_values, j)));
-                            }
-                            PA_Variable v = PA_CreateVariable(eVK_Object);
-                            PA_SetObjectVariable(&v, row);
-                            PA_SetCollectionElement(rows, PA_GetCollectionLength(rows), v);
-                            PA_ClearVariable(&v);
-                        }
-                        ob_set_n(returnValue, L"length", mdbsql->row_count);
-                        ob_set_c(returnValue, L"values", rows);
-                        ob_set_b(returnValue, L"success", true);
-                    }else{
-                        ob_set_s(returnValue, "errorMessage", mdb_sql_last_error(mdbsql));
+                    MdbTableDef *t = mdb_read_table (entry);
+                    mdb_read_columns(t);
+                    
+                    PA_CollectionRef fields = PA_CreateCollection();
+                    for (unsigned int j = 0; j < t->num_cols; ++j) {
+                        MdbColumn *col = (MdbColumn *)g_ptr_array_index (t->columns, j);
                         
-                    }
-                }
-                mdb_sql_exit(mdbsql);
-            }
-        }
-    }
-/*
-    MdbHandle *mdb = mdb_open ((const char *)path.c_str(), MDB_NOFLAGS);
-
-    if(mdb) {
-        if (mdb_read_catalog (mdb, MDB_TABLE)) {
-            
-            guint32 export_options = 0;
-            
-            char tempFilePathCString[PATH_MAX];
-            @autoreleasepool {
-                NSString *tempDir = NSTemporaryDirectory();
-                if(tempDir) {
-                    NSString *tempFileTemplate = [tempDir stringByAppendingPathComponent:@"mdb-tool.XXXXXX"];
-                    const char *tempFileTemplateCString = [tempFileTemplate fileSystemRepresentation];
-                    strcpy(tempFilePathCString, tempFileTemplateCString);
-                    int fd = mkstemp(tempFilePathCString);
-                    if (fd != -1) {
-                        FILE *fp = fdopen(fd, "wb");
-                        if(fp) {
-                            int success = mdb_print_schema(mdb, fp, NULL, NULL, export_options);
-                            fclose(fp);
-                            
-                            NSString *tempFilePath = [NSString stringWithUTF8String:tempFilePathCString];
-                            NSError *error = nil;
-                            NSString *fileContent = [NSString stringWithContentsOfFile:tempFilePath encoding:NSUTF8StringEncoding error:&error];
-
-                            returnValue.setUTF16String(fileContent);
-                            
-                            [[NSFileManager defaultManager] removeItemAtPath:tempFilePath error:nil];
+                        PA_ObjectRef field = PA_CreateObject();
+                        ob_set_s(field,
+                                 "name",
+                                 (const char *)col->name);
+                        
+                        if (mdb_colbacktype_takes_length(col)) {
+                            if (col->col_size == 0) {
+                                ob_set_n(field,
+                                         "length",
+                                         255);
+                            }
+                            else if (col->col_scale != 0) {
+                                ob_set_n(field,
+                                         "scale",
+                                         col->col_scale);
+                                ob_set_n(field,
+                                         "precision",
+                                         col->col_prec);
+                            }
+                            else if (!IS_JET3(mdb) && mdb_colbacktype_takes_length_in_characters(col)) {
+                                ob_set_n(field,
+                                         "length",
+                                         col->col_size/2);
+                            }
+                            else {
+                                ob_set_n(field,
+                                         "length",
+                                         col->col_size);
+                            }
                         }
+                        
+                        if (col->props) {
+                            gchar *defval = (gchar *)g_hash_table_lookup(col->props->hash, "DefaultValue");
+                            if (defval) {
+                                switch (col->col_type) {
+                                    case MDB_MEMO:
+                                    case MDB_TEXT:
+                                    case MDB_REPID:
+                                    {
+                                        std::string stringValue;
+                                        size_t def_len = strlen(defval);
+                                        if((def_len > 1) && (defval[0]=='"' && defval[def_len-1]=='"')) {
+                                            std::vector<char *>buf(def_len-1);
+                                            memcpy(&buf[0], defval+1, def_len-2);
+                                            stringValue = (const char *)&buf[0];
+                                        }else{
+                                            stringValue = (const char *)defval;
+                                        }
+                                        ob_set_s(field,
+                                                 "defaultValue",
+                                                 stringValue.c_str());
+                                    }
+                                        break;
+                                    case MDB_BOOL:
+                                    {
+                                        ob_set_b(field,
+                                                 L"defaultValue",
+                                                 !strcmp(defval, "Yes"));
+                                    }
+                                        break;
+                                    case MDB_DATETIME:
+                                    {
+                                        if (!g_ascii_strcasecmp(defval, "date()")) {
+                                            if (mdb_col_is_shortdate(col)) {
+                                                ob_set_s(field,
+                                                         "defaultValue",
+                                                         "shortDate()");
+                                            }else{
+                                                ob_set_s(field,
+                                                         "defaultValue",
+                                                         "longDate()");
+                                            }
+                                        }
+                                    }
+                                        break;
+                                    case MDB_NUMERIC:
+                                    case MDB_BYTE:
+                                    case MDB_INT:
+                                    case MDB_LONGINT:
+                                    case MDB_MONEY:
+                                    case MDB_FLOAT:
+                                    case MDB_DOUBLE:
+                                    {
+                                        double d;
+                                        sscanf(defval, "%lf", &d);
+                                        ob_set_n(field,
+                                                 L"defaultValue",
+                                                 d);
+                                    }
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        
+                        /*
+                         properties
+                         */
+                        
+//                        const char *appendOnly = mdb_col_get_prop(col, "AppendOnly");
+//                        if(appendOnly) {
+//                            ob_set_b(field, L"appendOnly", appendOnly  && appendOnly[0]=='n');
+//                        }
+                        
+//                        const char *validationRule = mdb_col_get_prop(col, "ValidationRule");
+//                        if(validationRule) {
+//                            ob_set_s(field, "validationRule", validationRule);
+//                        }
+                        
+//                        const char *validationText = mdb_col_get_prop(col, "ValidationText");
+//                        if(validationText) {
+//                            ob_set_s(field, "validationText", validationText);
+//                        }
+                        
+                        const char *description = mdb_col_get_prop(col, "Description");
+                        if(description) {
+                            ob_set_s(field, "description", description);
+                        }
+                        
+                        const char *format = mdb_col_get_prop(col, "Format");
+                        if(format) {
+                            ob_set_s(field, "format", format);
+                        }
+                        
+//                        const char *caption = mdb_col_get_prop(col, "Caption");
+//                        if(caption) {
+//                            ob_set_s(field, "caption", caption);
+//                        }
+                        
+                        const char *inputMask = mdb_col_get_prop(col, "InputMask");
+                        if(inputMask) {
+                            ob_set_s(field, "inputMask", inputMask);
+                        }
+                        
+//                        const char *newValues = mdb_col_get_prop(col, "NewValues");
+//                        if(newValues) {
+//                            ob_set_s(field, "newValues", newValues);
+//                        }
+                        
+//                        const char *textAlign = mdb_col_get_prop(col, "TextAlign");
+//                        if(textAlign) {
+//                            ob_set_s(field, "textAlign", textAlign);
+//                        }
+                        
+//                        const char *decimalPlaces = mdb_col_get_prop(col, "DecimalPlaces");
+//                        if(decimalPlaces) {
+//                            ob_set_s(field, "decimalPlaces", decimalPlaces);
+//                        }
+                        
+//                        const char *IMEMode = mdb_col_get_prop(col, "IMEMode");
+//                        if(IMEMode) {
+//                            ob_set_s(field, "IMEMode", IMEMode);
+//                        }
+                        
+//                        const char *IMESentenceMode = mdb_col_get_prop(col, "IMESentenceMode");
+//                        if(IMESentenceMode) {
+//                            ob_set_s(field, "IMESentenceMode", IMESentenceMode);
+//                        }
+                        
+//                        const char *showDatePicker = mdb_col_get_prop(col, "ShowDatePicker");
+//                        if(showDatePicker) {
+//                            ob_set_b(field, L"showDatePicker", showDatePicker[0] == '1');//1,0
+//                        }
+                        
+                        //bools
+                        
+                        const char *allowZeroLength = mdb_col_get_prop(col, "AllowZeroLength");
+                        if(allowZeroLength) {
+                            ob_set_b(field, L"allowZeroLength", allowZeroLength[0] == 'y');//yes,no
+                        }
+                        
+                        const char *required = mdb_col_get_prop(col, "Required");
+                        if(required) {
+                            ob_set_b(field, L"required", required[0] == 'y');//yes,no
+                        }
+                        
+                        PA_Variable v = PA_CreateVariable(eVK_Object);
+                        PA_SetObjectVariable(&v, field);
+                        PA_SetCollectionElement(fields, PA_GetCollectionLength(fields), v);
+                        PA_ClearVariable(&v);
                     }
+                    
+                    const char *description = mdb_table_get_prop(t, "Description");
+                    if(description) {
+                        ob_set_s(table, "description", description);
+                    }
+                    
+                    ob_set_c(table, L"fields", fields);
+
+                    PA_Variable v = PA_CreateVariable(eVK_Object);
+                    PA_SetObjectVariable(&v, table);
+                    PA_SetCollectionElement(tables, PA_GetCollectionLength(tables), v);
+                    PA_ClearVariable(&v);
                 }
+                ob_set_c(returnValue, L"tables", tables);
+                ob_set_b(returnValue, L"success", true);
+            }
+            mdb_close(mdb);
+        }
+    }
+
+    PA_ReturnObject(params, returnValue);
+}
+
+static void mdb_sql(PA_PluginParameters params) {
+        
+//    sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
+    PackagePtr pParams = (PackagePtr)params->fParameters;
+    
+    PA_ObjectRef returnValue;
+    returnValue = PA_CreateObject();
+    ob_set_b(returnValue, L"success", false);
+
+    C_TEXT Param1;
+    Param1.fromParamAtIndex(pParams, 1);
+    CUTF8String path;
+    Param1.copyUTF8String(&path);
+    
+    C_TEXT Param2;
+    Param2.fromParamAtIndex(pParams, 2);
+    CUTF8String sql;
+    Param2.copyUTF8String(&sql);
+
+    if(path.length()) {
+        MdbSQL *mdbsql = mdb_sql_init();
+        MdbHandle *mdb = mdb_sql_open(mdbsql, (char *)path.c_str());
+        if(mdb) {
+            mdb_sql_run_query(mdbsql, (const gchar *)sql.c_str());
+            if (!mdb_sql_has_error(mdbsql)) {
+                PA_CollectionRef rows = PA_CreateCollection();
+                while(mdb_sql_fetch_row(mdbsql, mdbsql->cur_table)) {
+                    PA_ObjectRef row = PA_CreateObject();
+                    for (unsigned int j = 0; j < mdbsql->num_columns; ++j) {
+                        MdbSQLColumn *sqlcol = (MdbSQLColumn *)g_ptr_array_index(mdbsql->columns, j);
+                        ob_set_s(row,
+                                 (const char *)sqlcol->name,
+                                 (const char *)(g_ptr_array_index(mdbsql->bound_values, j)));
+                    }
+                    PA_Variable v = PA_CreateVariable(eVK_Object);
+                    PA_SetObjectVariable(&v, row);
+                    PA_SetCollectionElement(rows, PA_GetCollectionLength(rows), v);
+                    PA_ClearVariable(&v);
+                }
+                ob_set_c(returnValue, L"values", rows);
+                ob_set_b(returnValue, L"success", true);
+            }else{
+                ob_set_s(returnValue, "errorMessage", mdb_sql_last_error(mdbsql));
+                
             }
         }
-        mdb_close (mdb);
+        mdb_sql_exit(mdbsql);
     }
-*/
+
     PA_ReturnObject(params, returnValue);
 }
 

@@ -4,7 +4,17 @@
     "commands": [
         {
             "theme": "mdb",
-            "syntax": "mdb sql(&T;&J):J",
+            "syntax": "mdb sql(&T;&T):J",
+            "threadSafe": true
+        },
+        {
+            "theme": "mdb",
+            "syntax": "mdb tables(&T):J",
+            "threadSafe": true
+        },
+        {
+            "theme": "mdb",
+            "syntax": "mdb export(&T;&T;&T):J",
             "threadSafe": true
         }
     ]
