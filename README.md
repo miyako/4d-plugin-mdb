@@ -95,15 +95,17 @@ Parameter|Type|Description
 name|Text|
 type|Text|
 description|Text|optional
-position|Number|
-number|Number|
+id|Number|
+autosequence|Boolean|optional
+autogenerate|Boolean|optional
 length|Number|optional
 defaultValue|Variant|optional
 format|Text|optional
 inputMask|Text|optional
 allowZeroLength|Boolean|optional
 required|Boolean|optional
-
+precision|Number|optional
+scale|Number|optional
 
 
 
