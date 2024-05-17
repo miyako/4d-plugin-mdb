@@ -25,12 +25,13 @@ errorMessage|Text|optional
 values|Collection|all values are text
 
 ```4d
-status:=mdb export(path;output)
+status:=mdb export(path;table;output)
 ```
 
 Parameter|Type|Description
 ------------|------------|----
 path|Text|POSIX path
+table|Text|name
 output|Text|POSIX path
 status|Object|
 
