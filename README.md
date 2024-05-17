@@ -25,13 +25,13 @@ errorMessage|Text|optional
 values|Collection|all values are text
 
 ```4d
-status:=mdb export(path;out)
+status:=mdb export(path;output)
 ```
 
 Parameter|Type|Description
 ------------|------------|----
 path|Text|POSIX path
-out|Text|POSIX path
+output|Text|POSIX path
 status|Object|
 
 the generated file follows the `SQL EXPORT SELECTION` output format:
