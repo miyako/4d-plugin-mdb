@@ -127,3 +127,5 @@ MDB_NUMERIC|Real|
 MDB_COMPLEX|Int|
 
 Large Number (Int64) is not supported. see `data.c` for details.
+
+* `UNIQUE` `PRIMARY KEY` is deduced from index definition.
