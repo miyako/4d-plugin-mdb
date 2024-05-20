@@ -43,14 +43,6 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
 
 #pragma mark -
 
-static int
-mdb_colbacktype_takes_length_in_characters(const MdbColumn *col) {
-    
-    const MdbBackendType *type = mdb_get_colbacktype(col);
-    if (!type) return 0;
-    return type->needs_char_length;
-}
-
 #define is_binary_type(x) (x==MDB_OLE || x==MDB_BINARY || x==MDB_REPID)
 #define EXPORT_BIND_SIZE 200000
 
@@ -201,8 +193,212 @@ static void mdb_export(PA_PluginParameters params) {
     PA_ReturnObject(params, returnValue);
 }
 
+static void mdb_column_definition (MdbColumn *col, std::string& column_definition) {
+    
+    std::string quoted_field_name = " [";
+    quoted_field_name += col->name;
+    quoted_field_name += "] ";
+        
+    switch (col->col_type) {
+        case MDB_BOOL:
+            column_definition = "Boolean";
+            break;
+        case MDB_BYTE:
+        case MDB_INT:
+        case MDB_LONGINT:
+        case MDB_COMPLEX:
+            column_definition = "Int";
+            break;
+        case MDB_MONEY:
+        case MDB_FLOAT:
+        case MDB_DOUBLE:
+        case MDB_NUMERIC:
+            column_definition = "Real";
+            break;
+        case MDB_DATETIME:
+            column_definition = "Timestamp";
+            break;
+        case MDB_BINARY:
+        case MDB_OLE:
+            column_definition = "Blob";
+            break;
+        case MDB_TEXT:
+        case MDB_MEMO:
+                if ((col->col_size == 0) || (col->col_size > 0xFF) || (col->col_size < 0)){
+                    column_definition = "Text";
+                }else{
+                    column_definition = "Varchar (";
+                    column_definition+= std::to_string(col->col_size);
+                    column_definition+= ")";
+                }
+            break;
+        case MDB_REPID:
+            column_definition = "UUID";
+            break;
+    }
+        
+    /*
+     UNIQUE is defined as index
+     PRIMARY KEY is defined as constraint
+     4D has no concept of allow zero length as the SQL engine level
+     4D has no concept of default value at the DB engine level
+     */
+    
+    const gchar *required = mdb_col_get_prop(col, "Required");
+    if ((required && required[0]=='y')||(col->col_type == MDB_BOOL)) {
+        column_definition += " NOT NULL";
+    }
+    
+    column_definition = quoted_field_name + column_definition;
+
+    MdbTableDef *table = col->table;
+        
+    for (unsigned int i = 0; i < table->num_idxs; ++i) {
+        MdbIndex *idx = (MdbIndex *)g_ptr_array_index (table->indices, i);
+        if (idx->index_type==2) {
+            continue;
+        }
+        if (idx->index_type==1) {
+            continue;
+        }else if (idx->flags & MDB_IDX_UNIQUE){
+            for (unsigned int j = 0; j<idx->num_keys; ++j) {
+                MdbColumn *idxcol= (MdbColumn *)g_ptr_array_index(table->columns, idx->key_col_num[j]-1);
+                if(idxcol == col) {
+                    column_definition += " UNIQUE";
+                    break;
+                }
+            }
+        }
+    }
+    
+    switch (col->col_type) {
+        case MDB_BYTE:
+        case MDB_INT:
+        case MDB_LONGINT:
+        case MDB_COMPLEX:
+            if(col->is_long_auto) {
+                column_definition += " AUTO_INCREMENT";
+            }
+            break;
+        case MDB_REPID:
+            if(col->is_uuid_auto) {
+                column_definition += " AUTO_GENERATE";
+            }
+            break;
+    }
+}
+
 static void mdb_schema(PA_PluginParameters params) {
 
+    //    sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
+    PackagePtr pParams = (PackagePtr)params->fParameters;
+    
+    PA_ObjectRef returnValue;
+    returnValue = PA_CreateObject();
+    ob_set_b(returnValue, L"success", false);
+    
+    C_TEXT Param1;
+    Param1.fromParamAtIndex(pParams, 1);
+    CUTF8String path;
+    Param1.copyUTF8String(&path);
+    
+    C_TEXT Param2;
+    Param2.fromParamAtIndex(pParams, 2);
+    CUTF8String output;
+    Param2.copyUTF8String(&output);
+
+    if(path.length()) {
+        MdbHandle *mdb = mdb_open ((char *)path.c_str(), MDB_NOFLAGS);
+        if(mdb) {
+            if(mdb_read_catalog (mdb, MDB_TABLE)) {
+                                
+                const char *charset = mdb_target_charset(mdb);
+                ob_set_s(returnValue, "charset", charset);
+                FILE *fp = fopen((char *)output.c_str(), "wb");
+                if(fp) {
+                    for (unsigned int i=0; i < mdb->num_catalog; ++i) {
+                        MdbCatalogEntry *entry = (MdbCatalogEntry *)g_ptr_array_index (mdb->catalog, i);
+                        if (entry->object_type == MDB_TABLE) {
+                            if (mdb_is_user_table(entry)) {
+                                std::string name = entry->object_name;
+                                std::string quoted_table_name = "[";
+                                quoted_table_name += (const char *)name.c_str();
+                                quoted_table_name += "]";
+                                fprintf(fp, "CREATE TABLE IF NOT EXISTS %s (\n", quoted_table_name.c_str());
+                                MdbTableDef *table = mdb_read_table (entry);
+                                mdb_read_columns(table);
+                                mdb_read_indices(table);
+                                for (unsigned int j = 0; j < table->num_cols; ++j) {
+                                    MdbColumn *col = (MdbColumn *)g_ptr_array_index (table->columns, j);
+                                    std::string column_definition;
+                                    mdb_column_definition(col, column_definition);
+                                    fputs(column_definition.c_str(), fp);
+                                    if (j < table->num_cols - 1) {
+                                        fputs(",\n", fp);
+                                    }
+                                    else {
+                                        for (unsigned int j = 0; j < table->num_idxs; ++j) {
+                                            MdbIndex *idx = (MdbIndex *)g_ptr_array_index (table->indices, j);
+                                            if (idx->index_type==2) {
+                                                continue;
+                                            }
+                                            if (idx->index_type==1) {
+                                                fputs(",\n PRIMARY KEY ( ", fp);
+                                                for (unsigned int k = 0; k < idx->num_keys; ++k) {
+                                                    if(k) fputs(" , ", fp);
+                                                    MdbColumn *col= (MdbColumn *)g_ptr_array_index(table->columns, idx->key_col_num[k]-1);
+                                                    std::string quoted_field_name = "[";
+                                                    quoted_field_name += col->name;
+                                                    quoted_field_name += "]";
+                                                    fputs(quoted_field_name.c_str(), fp);
+                                                }
+                                                fputs(" )", fp);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                fputs("\n);\n", fp);//CREATE TABLE
+                                
+                                for (unsigned int j = 0; j < table->num_idxs; ++j) {
+                                    MdbIndex *idx = (MdbIndex *)g_ptr_array_index (table->indices, j);
+                                    if(idx->num_keys != 0) {
+                                        std::string quoted_index_name = "[";
+                                        quoted_index_name += (const char *)name.c_str();
+                                        quoted_index_name += ".";
+                                        quoted_index_name += idx->name;
+                                        quoted_index_name += "]";
+                                        fprintf(fp, "CREATE INDEX %s ON %s (\n",
+                                                quoted_index_name.c_str(), quoted_table_name.c_str());
+                                        for (unsigned int k = 0; k < idx->num_keys; ++k) {
+                                            if(k) fputs(" , ", fp);
+                                            MdbColumn *col= (MdbColumn *)g_ptr_array_index(table->columns, idx->key_col_num[k]-1);
+                                            std::string quoted_field_name = "[";
+                                            quoted_field_name += col->name;
+                                            quoted_field_name += "]";
+                                            fputs(quoted_field_name.c_str(), fp);
+                                        }
+                                        fputs("\n);\n", fp);//CREATE INDEX
+                                    }
+                                }
+                                mdb_free_tabledef (table);
+                            }
+                        }
+                    }
+                    
+                    fclose(fp);
+                    ob_set_b(returnValue, L"success", true);
+                }
+            }else{
+                ob_set_s(returnValue, "errorMessage", "failed: mdb_read_catalog()");
+            }
+            mdb_close(mdb);
+        }else{
+            ob_set_s(returnValue, "errorMessage", "failed: mdb_open()");
+        }
+    }
+
+    PA_ReturnObject(params, returnValue);
 }
 
 static void print_properties(gpointer key, gpointer value, gpointer p) {
@@ -264,31 +460,18 @@ static void mdb_tables(PA_PluginParameters params) {
                         if(col->is_uuid_auto) {
                             ob_set_b(field, L"autogenerate", true);
                         }
-
-                        if (mdb_colbacktype_takes_length(col)) {
-                            if (col->col_size == 0) {
-                                ob_set_n(field,
-                                         "length",
-                                         255);
-                            }
-                            else if (col->col_scale != 0) {
-                                ob_set_n(field,
-                                         "scale",
-                                         col->col_scale);
-                                ob_set_n(field,
-                                         "precision",
-                                         col->col_prec);
-                            }
-                            else if (!IS_JET3(mdb) && mdb_colbacktype_takes_length_in_characters(col)) {
-                                ob_set_n(field,
-                                         "length",
-                                         col->col_size/2);
-                            }
-                            else {
-                                ob_set_n(field,
-                                         "length",
-                                         col->col_size);
-                            }
+                        if (col->col_size != 0) {
+                            ob_set_n(field,
+                                     "length",
+                                     col->col_size);
+                        }
+                        if (col->col_scale != 0) {
+                            ob_set_n(field,
+                                     "scale",
+                                     col->col_scale);
+                            ob_set_n(field,
+                                     "precision",
+                                     col->col_prec);
                         }
                         
                         switch (col->col_type) {
