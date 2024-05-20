@@ -122,7 +122,7 @@ MDB_BINARY|Blob|Attachment
 MDB_TEXT|Text|Short Text (formerly known as “Text”)
 MDB_OLE|Blob|Pictures, graphs, or other ActiveX objects from another Windows-based application.
 MDB_MEMO|Text|Long Text (formerly known as “Memo”
-MDB_REPID|Text (UUID)|AutoNumber (16 bytes for ReplicationID)
+MDB_REPID|Text UUID|AutoNumber (16 bytes for ReplicationID)
 MDB_NUMERIC|Real|
 MDB_COMPLEX|Int|
 
